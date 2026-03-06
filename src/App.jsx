@@ -5,29 +5,48 @@ import {
   ChevronRight,
   Folder,
   Home,
+  ShoppingCart,
+  Briefcase,
+  Bath,
+  BedDouble,
+  CookingPot,
+  Package,
   ListTodo,
-  LogIn,
   LogOut,
   Plus,
   Trash2,
-  User2,
   Users,
-  Briefcase,
-  BedDouble,
-  Bath,
-  CookingPot,
-  Package,
-  ShoppingCart,
-  Pencil,
-  Save,
-  X,
+  User2,
 } from "lucide-react";
 import { supabase } from "./supabase";
 
-const USERS = [
-  { id: "Eddy", name: "Eddy", pin: "1234" },
-  { id: "Paula", name: "Paula", pin: "5678" },
-];
+function iconForFolder(iconName) {
+  const className = "h-5 w-5";
+  switch (iconName) {
+    case "home":
+      return <Home className={className} />;
+    case "shopping":
+      return <ShoppingCart className={className} />;
+    case "work":
+      return <Briefcase className={className} />;
+    case "bathroom":
+      return <Bath className={className} />;
+    case "bedroom":
+      return <BedDouble className={className} />;
+    case "kitchen":
+      return <CookingPot className={className} />;
+    case "box":
+      return <Package className={className} />;
+    default:
+      return <Folder className={className} />;
+  }
+}
+
+function priorityLabel(priority) {
+  if (priority === "high") return "🔴 Hög";
+  if (priority === "low") return "🟢 Låg";
+  return "🟡 Medel";
+}
 
 function StatCard({ label, value, icon: Icon }) {
   return (
@@ -45,20 +64,51 @@ function StatCard({ label, value, icon: Icon }) {
   );
 }
 
-function LoginScreen({ onLogin }) {
-  const [selectedUser, setSelectedUser] = useState(USERS[0].id);
-  const [pin, setPin] = useState("");
+function AuthScreen({ onLoggedIn }) {
+  const [mode, setMode] = useState("login");
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [info, setInfo] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = () => {
-    const user = USERS.find((u) => u.id === selectedUser);
-    if (!user) return;
+  const handleSubmit = async () => {
+    setError("");
+    setInfo("");
+    setLoading(true);
 
-    if (pin === user.pin) {
-      setError("");
-      onLogin(user.id);
-    } else {
-      setError("Fel PIN-kod. Testa 1234 för Eddy eller 5678 för Paula.");
+    try {
+      if (mode === "signup") {
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              full_name: fullName,
+            },
+          },
+        });
+
+        if (error) throw error;
+
+        setInfo(
+          "Konto skapat. Om Supabase kräver mailbekräftelse, öppna mailet först. Annars kan du logga in direkt."
+        );
+        setMode("login");
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (error) throw error;
+        onLoggedIn();
+      }
+    } catch (err) {
+      setError(err.message || "Något gick fel.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -69,84 +119,82 @@ function LoginScreen({ onLogin }) {
           <div className="bg-slate-900 p-8 text-white md:p-10">
             <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm">
               <Users className="h-4 w-4" />
-              Delad app för er två
+              Household-version
             </div>
 
             <h1 className="mt-6 text-4xl font-semibold leading-tight">
-              Gemensamma mappar för hem och handling
+              Delade hemmaplaner för par och familj
             </h1>
 
             <p className="mt-4 max-w-md text-slate-300">
-              Organisera allt i mappar som Hemma och Handla, med underrubriker som
-              Vardagsrum, Sovrum, Kök eller Veckohandling.
+              Skapa konto, skapa eller gå med i ett household, och dela samma mappar och uppgifter.
             </p>
           </div>
 
           <div className="p-8 md:p-10">
             <div className="mx-auto max-w-md">
-              <div className="flex items-center gap-3">
-                <div className="rounded-2xl bg-slate-100 p-3 text-slate-700">
-                  <LogIn className="h-5 w-5" />
-                </div>
-                <div>
-                  <h2 className="text-2xl font-semibold text-slate-900">Logga in</h2>
-                  <p className="text-sm text-slate-500">Välj användare och skriv PIN-kod</p>
-                </div>
+              <div className="mb-6 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setMode("login")}
+                  className={`rounded-full px-4 py-2 text-sm ${
+                    mode === "login"
+                      ? "bg-slate-900 text-white"
+                      : "bg-slate-100 text-slate-700"
+                  }`}
+                >
+                  Logga in
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMode("signup")}
+                  className={`rounded-full px-4 py-2 text-sm ${
+                    mode === "signup"
+                      ? "bg-slate-900 text-white"
+                      : "bg-slate-100 text-slate-700"
+                  }`}
+                >
+                  Skapa konto
+                </button>
               </div>
 
-              <div className="mt-8 space-y-5">
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-slate-700">
-                    Användare
-                  </label>
-                  <div className="grid grid-cols-2 gap-3">
-                    {USERS.map((user) => {
-                      const active = selectedUser === user.id;
-
-                      return (
-                        <button
-                          key={user.id}
-                          type="button"
-                          onClick={() => setSelectedUser(user.id)}
-                          className={`rounded-2xl border px-4 py-3 text-left transition ${
-                            active
-                              ? "border-slate-900 bg-slate-900 text-white"
-                              : "border-slate-200 bg-white text-slate-800 hover:border-slate-300"
-                          }`}
-                        >
-                          <div className="flex items-center gap-2">
-                            <User2 className="h-4 w-4" />
-                            {user.name}
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-slate-700">
-                    PIN-kod
-                  </label>
+              <div className="space-y-4">
+                {mode === "signup" ? (
                   <input
-                    type="password"
-                    value={pin}
-                    onChange={(e) => setPin(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleLogin()}
-                    placeholder="Skriv PIN-kod"
-                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none transition focus:border-slate-400"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="Namn"
+                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-400"
                   />
-                </div>
+                ) : null}
+
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Email"
+                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-400"
+                />
+
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+                  placeholder="Lösenord"
+                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-400"
+                />
 
                 {error ? <div className="text-sm text-rose-600">{error}</div> : null}
+                {info ? <div className="text-sm text-emerald-700">{info}</div> : null}
 
                 <button
                   type="button"
-                  onClick={handleLogin}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 font-medium text-white transition hover:opacity-95"
+                  onClick={handleSubmit}
+                  disabled={loading}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 font-medium text-white transition hover:opacity-95 disabled:opacity-60"
                 >
-                  <LogIn className="h-4 w-4" />
-                  Fortsätt
+                  {loading ? "Jobbar..." : mode === "signup" ? "Skapa konto" : "Logga in"}
                 </button>
               </div>
             </div>
@@ -157,44 +205,113 @@ function LoginScreen({ onLogin }) {
   );
 }
 
-function priorityLabel(priority) {
-  if (priority === "high") return "🔴 Hög";
-  if (priority === "low") return "🟢 Låg";
-  return "🟡 Medel";
-}
+function HouseholdSetup({ refreshApp }) {
+  const [householdName, setHouseholdName] = useState("");
+  const [inviteCode, setInviteCode] = useState("");
+  const [error, setError] = useState("");
+  const [info, setInfo] = useState("");
+  const [loading, setLoading] = useState(false);
 
-function priorityClasses(priority, done) {
-  if (done) return "border-emerald-200 bg-emerald-50";
-  if (priority === "high") return "border-rose-200 bg-rose-50";
-  if (priority === "low") return "border-emerald-200 bg-emerald-50/40";
-  return "border-amber-200 bg-amber-50";
-}
+  const createHousehold = async () => {
+    setError("");
+    setInfo("");
+    setLoading(true);
 
-function getFolderIcon(iconName) {
-  const className = "h-5 w-5";
+    try {
+      const { error } = await supabase.rpc("create_household", {
+        p_name: householdName,
+      });
+      if (error) throw error;
 
-  switch (iconName) {
-    case "home":
-      return <Home className={className} />;
-    case "shopping":
-      return <ShoppingCart className={className} />;
-    case "work":
-      return <Briefcase className={className} />;
-    case "bedroom":
-      return <BedDouble className={className} />;
-    case "bathroom":
-      return <Bath className={className} />;
-    case "kitchen":
-      return <CookingPot className={className} />;
-    case "box":
-      return <Package className={className} />;
-    default:
-      return <Folder className={className} />;
-  }
+      setInfo("Household skapat.");
+      refreshApp();
+    } catch (err) {
+      setError(err.message || "Kunde inte skapa household.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const joinHousehold = async () => {
+    setError("");
+    setInfo("");
+    setLoading(true);
+
+    try {
+      const { error } = await supabase.rpc("join_household_by_code", {
+        p_code: inviteCode,
+      });
+      if (error) throw error;
+
+      setInfo("Du gick med i householdet.");
+      refreshApp();
+    } catch (err) {
+      setError(err.message || "Kunde inte gå med i household.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-50 p-6">
+      <div className="mx-auto max-w-4xl">
+        <div className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-black/5">
+          <h1 className="text-3xl font-semibold text-slate-900">Sätt upp ert household</h1>
+          <p className="mt-2 text-slate-500">
+            Skapa ett nytt household eller gå med i ett befintligt med invite code.
+          </p>
+
+          <div className="mt-8 grid gap-6 md:grid-cols-2">
+            <div className="rounded-2xl border border-slate-200 p-5">
+              <h2 className="text-xl font-semibold text-slate-900">Skapa nytt household</h2>
+              <input
+                value={householdName}
+                onChange={(e) => setHouseholdName(e.target.value)}
+                placeholder="T.ex. Eddy & Paula"
+                className="mt-4 w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-400"
+              />
+              <button
+                type="button"
+                onClick={createHousehold}
+                disabled={loading}
+                className="mt-4 inline-flex rounded-2xl bg-slate-900 px-5 py-3 font-medium text-white disabled:opacity-60"
+              >
+                Skapa household
+              </button>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 p-5">
+              <h2 className="text-xl font-semibold text-slate-900">Gå med med invite code</h2>
+              <input
+                value={inviteCode}
+                onChange={(e) => setInviteCode(e.target.value)}
+                placeholder="T.ex. A1B2C3D4"
+                className="mt-4 w-full rounded-2xl border border-slate-200 px-4 py-3 uppercase outline-none focus:border-slate-400"
+              />
+              <button
+                type="button"
+                onClick={joinHousehold}
+                disabled={loading}
+                className="mt-4 inline-flex rounded-2xl border border-slate-200 px-5 py-3 font-medium text-slate-700 disabled:opacity-60"
+              >
+                Gå med
+              </button>
+            </div>
+          </div>
+
+          {error ? <div className="mt-6 text-sm text-rose-600">{error}</div> : null}
+          {info ? <div className="mt-6 text-sm text-emerald-700">{info}</div> : null}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function App() {
-  const [currentUserId, setCurrentUserId] = useState(null);
+  const [session, setSession] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [household, setHousehold] = useState(null);
+  const [members, setMembers] = useState([]);
   const [folders, setFolders] = useState([]);
   const [sections, setSections] = useState([]);
   const [items, setItems] = useState([]);
@@ -205,47 +322,105 @@ export default function App() {
   const [drafts, setDrafts] = useState({});
   const [filter, setFilter] = useState("alla");
   const [openFolders, setOpenFolders] = useState({});
-
-  const [editingFolderId, setEditingFolderId] = useState(null);
-  const [editingFolderName, setEditingFolderName] = useState("");
-  const [editingFolderColor, setEditingFolderColor] = useState("#0f172a");
-  const [editingFolderIcon, setEditingFolderIcon] = useState("folder");
-
-  const [editingSectionId, setEditingSectionId] = useState(null);
-  const [editingSectionName, setEditingSectionName] = useState("");
-
-  const [editingItemId, setEditingItemId] = useState(null);
-  const [editingItemText, setEditingItemText] = useState("");
-  const [editingItemPriority, setEditingItemPriority] = useState("medium");
-  const [editingItemAssignedTo, setEditingItemAssignedTo] = useState("Eddy");
-
   const [loading, setLoading] = useState(true);
 
-  const currentUser = USERS.find((u) => u.id === currentUserId) || null;
+  const currentUserId = session?.user?.id || null;
 
-  async function loadData() {
+  const memberMap = useMemo(() => {
+    const map = {};
+    members.forEach((member) => {
+      map[member.user_id] = member.full_name || "Okänd";
+    });
+    return map;
+  }, [members]);
+
+  async function refreshApp() {
     setLoading(true);
 
+    const {
+      data: { session: activeSession },
+    } = await supabase.auth.getSession();
+
+    setSession(activeSession);
+
+    if (!activeSession?.user) {
+      setProfile(null);
+      setHousehold(null);
+      setMembers([]);
+      setFolders([]);
+      setSections([]);
+      setItems([]);
+      setLoading(false);
+      return;
+    }
+
+    const { data: profileData } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", activeSession.user.id)
+      .single();
+
+    setProfile(profileData || null);
+
+    const { data: membershipData } = await supabase
+      .from("household_members")
+      .select("household_id")
+      .eq("user_id", activeSession.user.id)
+      .limit(1);
+
+    const householdId = membershipData?.[0]?.household_id || null;
+
+    if (!householdId) {
+      setHousehold(null);
+      setMembers([]);
+      setFolders([]);
+      setSections([]);
+      setItems([]);
+      setLoading(false);
+      return;
+    }
+
     const [
-      { data: foldersData, error: foldersError },
-      { data: sectionsData, error: sectionsError },
-      { data: itemsData, error: itemsError },
+      { data: householdData },
+      { data: memberRows },
+      { data: folderRows },
+      { data: sectionRows },
+      { data: itemRows },
     ] = await Promise.all([
-      supabase.from("folders").select("*").order("created_at", { ascending: true }),
-      supabase.from("sections").select("*").order("created_at", { ascending: true }),
-      supabase.from("items").select("*").order("created_at", { ascending: true }),
+      supabase.from("households").select("*").eq("id", householdId).single(),
+      supabase.from("household_members").select("*").eq("household_id", householdId),
+      supabase.from("folders").select("*").eq("household_id", householdId).order("created_at"),
+      supabase.from("sections").select("*").order("created_at"),
+      supabase.from("items").select("*").order("created_at"),
     ]);
 
-    if (foldersError) console.error(foldersError);
-    if (sectionsError) console.error(sectionsError);
-    if (itemsError) console.error(itemsError);
+    const memberIds = (memberRows || []).map((m) => m.user_id);
+    let profileRows = [];
+    if (memberIds.length > 0) {
+      const { data } = await supabase.from("profiles").select("*").in("id", memberIds);
+      profileRows = data || [];
+    }
 
-    setFolders(foldersData || []);
-    setSections(sectionsData || []);
-    setItems(itemsData || []);
+    const mergedMembers = (memberRows || []).map((member) => ({
+      ...member,
+      full_name:
+        profileRows.find((p) => p.id === member.user_id)?.full_name || "Okänd",
+    }));
+
+    setHousehold(householdData || null);
+    setMembers(mergedMembers);
+    setFolders(folderRows || []);
+
+    const folderIds = (folderRows || []).map((f) => f.id);
+    const allowedSections = (sectionRows || []).filter((s) => folderIds.includes(s.folder_id));
+    setSections(allowedSections);
+
+    const sectionIds = allowedSections.map((s) => s.id);
+    const allowedItems = (itemRows || []).filter((i) => sectionIds.includes(i.section_id));
+    setItems(allowedItems);
 
     const nextOpenFolders = {};
-    (foldersData || []).forEach((folder) => {
+    (folderRows || []).forEach((folder) => {
       nextOpenFolders[folder.id] = true;
     });
     setOpenFolders((prev) => ({ ...nextOpenFolders, ...prev }));
@@ -254,13 +429,20 @@ export default function App() {
   }
 
   useEffect(() => {
-    loadData();
+    refreshApp();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(() => {
+      refreshApp();
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const allItems = useMemo(() => items, [items]);
-  const totalItems = allItems.length;
-  const doneItems = allItems.filter((item) => item.done).length;
-  const myItems = allItems.filter(
+  const totalItems = items.length;
+  const doneItems = items.filter((item) => item.done).length;
+  const myItems = items.filter(
     (item) => item.assigned_to === currentUserId && !item.done
   ).length;
 
@@ -276,8 +458,10 @@ export default function App() {
     }));
   }, [folders, sections, items]);
 
-  const login = (userId) => setCurrentUserId(userId);
-  const logout = () => setCurrentUserId(null);
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    refreshApp();
+  };
 
   const toggleFolder = (folderId) => {
     setOpenFolders((prev) => ({ ...prev, [folderId]: !prev[folderId] }));
@@ -285,10 +469,11 @@ export default function App() {
 
   const createFolder = async () => {
     const name = newFolderName.trim();
-    if (!name) return;
+    if (!name || !household?.id) return;
 
     const { error } = await supabase.from("folders").insert([
       {
+        household_id: household.id,
         name,
         color: newFolderColor,
         icon: newFolderIcon,
@@ -303,52 +488,14 @@ export default function App() {
     setNewFolderName("");
     setNewFolderColor("#0f172a");
     setNewFolderIcon("folder");
-    loadData();
-  };
-
-  const startEditFolder = (folder) => {
-    setEditingFolderId(folder.id);
-    setEditingFolderName(folder.name || "");
-    setEditingFolderColor(folder.color || "#0f172a");
-    setEditingFolderIcon(folder.icon || "folder");
-  };
-
-  const cancelEditFolder = () => {
-    setEditingFolderId(null);
-    setEditingFolderName("");
-    setEditingFolderColor("#0f172a");
-    setEditingFolderIcon("folder");
-  };
-
-  const saveFolderEdit = async () => {
-    const name = editingFolderName.trim();
-    if (!name || !editingFolderId) return;
-
-    const { error } = await supabase
-      .from("folders")
-      .update({
-        name,
-        color: editingFolderColor,
-        icon: editingFolderIcon,
-      })
-      .eq("id", editingFolderId);
-
-    if (error) {
-      console.error(error);
-      return;
-    }
-
-    cancelEditFolder();
-    loadData();
+    refreshApp();
   };
 
   const createSection = async (folderId) => {
     const name = (newSectionNames[folderId] || "").trim();
     if (!name) return;
 
-    const { error } = await supabase
-      .from("sections")
-      .insert([{ folder_id: folderId, name }]);
+    const { error } = await supabase.from("sections").insert([{ folder_id: folderId, name }]);
 
     if (error) {
       console.error(error);
@@ -356,55 +503,7 @@ export default function App() {
     }
 
     setNewSectionNames((prev) => ({ ...prev, [folderId]: "" }));
-    loadData();
-  };
-
-  const startEditSection = (section) => {
-    setEditingSectionId(section.id);
-    setEditingSectionName(section.name || "");
-  };
-
-  const cancelEditSection = () => {
-    setEditingSectionId(null);
-    setEditingSectionName("");
-  };
-
-  const saveSectionEdit = async () => {
-    const name = editingSectionName.trim();
-    if (!name || !editingSectionId) return;
-
-    const { error } = await supabase
-      .from("sections")
-      .update({ name })
-      .eq("id", editingSectionId);
-
-    if (error) {
-      console.error(error);
-      return;
-    }
-
-    cancelEditSection();
-    loadData();
-  };
-
-  const deleteFolder = async (folderId) => {
-    const { error } = await supabase.from("folders").delete().eq("id", folderId);
-    if (error) {
-      console.error(error);
-      return;
-    }
-
-    loadData();
-  };
-
-  const deleteSection = async (sectionId) => {
-    const { error } = await supabase.from("sections").delete().eq("id", sectionId);
-    if (error) {
-      console.error(error);
-      return;
-    }
-
-    loadData();
+    refreshApp();
   };
 
   const addItem = async (folderId, sectionId) => {
@@ -412,7 +511,7 @@ export default function App() {
     const draft = drafts[draftKey];
     const text = draft?.text?.trim();
 
-    if (!text || !currentUser) return;
+    if (!text || !currentUserId) return;
 
     const { error } = await supabase.from("items").insert([
       {
@@ -420,8 +519,8 @@ export default function App() {
         text,
         done: false,
         priority: draft.priority || "medium",
-        created_by: currentUser.id,
-        assigned_to: draft.assignedTo || currentUser.id,
+        created_by: currentUserId,
+        assigned_to: draft.assignedTo || currentUserId,
       },
     ]);
 
@@ -434,48 +533,12 @@ export default function App() {
       ...prev,
       [draftKey]: {
         text: "",
-        assignedTo: currentUser.id,
+        assignedTo: currentUserId,
         priority: "medium",
       },
     }));
 
-    loadData();
-  };
-
-  const startEditItem = (item) => {
-    setEditingItemId(item.id);
-    setEditingItemText(item.text || "");
-    setEditingItemPriority(item.priority || "medium");
-    setEditingItemAssignedTo(item.assigned_to || currentUserId);
-  };
-
-  const cancelEditItem = () => {
-    setEditingItemId(null);
-    setEditingItemText("");
-    setEditingItemPriority("medium");
-    setEditingItemAssignedTo(currentUserId || "Eddy");
-  };
-
-  const saveItemEdit = async () => {
-    const text = editingItemText.trim();
-    if (!text || !editingItemId) return;
-
-    const { error } = await supabase
-      .from("items")
-      .update({
-        text,
-        priority: editingItemPriority,
-        assigned_to: editingItemAssignedTo,
-      })
-      .eq("id", editingItemId);
-
-    if (error) {
-      console.error(error);
-      return;
-    }
-
-    cancelEditItem();
-    loadData();
+    refreshApp();
   };
 
   const toggleItem = async (itemId, currentDone) => {
@@ -489,7 +552,7 @@ export default function App() {
       return;
     }
 
-    loadData();
+    refreshApp();
   };
 
   const deleteItem = async (itemId) => {
@@ -499,36 +562,75 @@ export default function App() {
       return;
     }
 
-    loadData();
+    refreshApp();
   };
 
-  if (!currentUser) {
-    return <LoginScreen onLogin={login} />;
+  const deleteSection = async (sectionId) => {
+    const { error } = await supabase.from("sections").delete().eq("id", sectionId);
+    if (error) {
+      console.error(error);
+      return;
+    }
+
+    refreshApp();
+  };
+
+  const deleteFolder = async (folderId) => {
+    const { error } = await supabase.from("folders").delete().eq("id", folderId);
+    if (error) {
+      console.error(error);
+      return;
+    }
+
+    refreshApp();
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50 p-6">
+        <div className="mx-auto max-w-5xl rounded-[28px] bg-white p-10 text-center shadow-sm ring-1 ring-black/5">
+          Laddar...
+        </div>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return <AuthScreen onLoggedIn={refreshApp} />;
+  }
+
+  if (!household) {
+    return <HouseholdSetup refreshApp={refreshApp} />;
   }
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-6">
       <div className="mx-auto max-w-7xl">
-        <div className="mb-6 flex flex-col gap-4 rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-black/5 md:flex-row md:items-center md:justify-between">
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-sm text-slate-700">
-              <Users className="h-4 w-4" />
-              Inloggad som {currentUser.name}
+        <div className="mb-6 rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-black/5">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-sm text-slate-700">
+                <Users className="h-4 w-4" />
+                {household.name}
+              </div>
+              <h1 className="mt-3 text-3xl font-semibold text-slate-900">Våra mappar</h1>
+              <p className="mt-1 text-slate-500">
+                Invite code: <span className="font-medium">{household.invite_code}</span>
+              </p>
+              <p className="mt-1 text-slate-500">
+                Inloggad som {profile?.full_name || session.user.email}
+              </p>
             </div>
-            <h1 className="mt-3 text-3xl font-semibold text-slate-900">Våra mappar</h1>
-            <p className="mt-1 text-slate-500">
-              Exempel: Hemma → Vardagsrum / Sovrum / Kök
-            </p>
-          </div>
 
-          <button
-            type="button"
-            onClick={logout}
-            className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-slate-700 hover:bg-slate-50"
-          >
-            <LogOut className="h-4 w-4" />
-            Logga ut
-          </button>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-slate-700 hover:bg-slate-50"
+            >
+              <LogOut className="h-4 w-4" />
+              Logga ut
+            </button>
+          </div>
         </div>
 
         <div className="mb-6 grid gap-4 md:grid-cols-3">
@@ -566,7 +668,6 @@ export default function App() {
             value={newFolderColor}
             onChange={(e) => setNewFolderColor(e.target.value)}
             className="h-12 w-full rounded-2xl border border-slate-200 bg-white p-1"
-            title="Välj färg på mappen"
           />
 
           <button
@@ -601,426 +702,240 @@ export default function App() {
           ))}
         </div>
 
-        {loading ? (
-          <div className="rounded-[28px] bg-white p-10 text-center text-slate-500 shadow-sm ring-1 ring-black/5">
-            Laddar mappar...
-          </div>
-        ) : (
-          <div className="space-y-5">
-            {foldersWithSections.map((folder) => (
-              <div
-                key={folder.id}
-                className="rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-black/5"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <button
-                    type="button"
-                    onClick={() => toggleFolder(folder.id)}
-                    className="flex items-center gap-3 text-left"
+        <div className="space-y-5">
+          {foldersWithSections.map((folder) => (
+            <div
+              key={folder.id}
+              className="rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-black/5"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={() => toggleFolder(folder.id)}
+                  className="flex items-center gap-3 text-left"
+                >
+                  {openFolders[folder.id] ? (
+                    <ChevronDown className="h-5 w-5 text-slate-500" />
+                  ) : (
+                    <ChevronRight className="h-5 w-5 text-slate-500" />
+                  )}
+
+                  <div
+                    className="rounded-2xl p-2 text-white"
+                    style={{ backgroundColor: folder.color || "#0f172a" }}
                   >
-                    {openFolders[folder.id] ? (
-                      <ChevronDown className="h-5 w-5 text-slate-500" />
-                    ) : (
-                      <ChevronRight className="h-5 w-5 text-slate-500" />
-                    )}
+                    {iconForFolder(folder.icon)}
+                  </div>
 
-                    <div
-                      className="rounded-2xl p-2 text-white"
-                      style={{ backgroundColor: folder.color || "#0f172a" }}
-                    >
-                      {getFolderIcon(folder.icon)}
-                    </div>
+                  <div>
+                    <h2 className="text-xl font-semibold text-slate-900">{folder.name}</h2>
+                    <p className="text-sm text-slate-500">{folder.sections.length} sections</p>
+                  </div>
+                </button>
 
-                    <div>
-                      <h2 className="text-xl font-semibold text-slate-900">{folder.name}</h2>
-                      <p className="text-sm text-slate-500">
-                        {folder.sections.length} underrubriker
-                      </p>
-                    </div>
-                  </button>
+                <button
+                  type="button"
+                  onClick={() => deleteFolder(folder.id)}
+                  className="rounded-2xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-rose-600"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
 
-                  <div className="flex items-center gap-2">
+              {openFolders[folder.id] ? (
+                <div className="mt-5">
+                  <div className="mb-5 grid gap-3 md:grid-cols-[1fr_auto]">
+                    <input
+                      value={newSectionNames[folder.id] || ""}
+                      onChange={(e) =>
+                        setNewSectionNames((prev) => ({
+                          ...prev,
+                          [folder.id]: e.target.value,
+                        }))
+                      }
+                      onKeyDown={(e) => e.key === "Enter" && createSection(folder.id)}
+                      placeholder={`Ny section i ${folder.name}`}
+                      className="rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-400"
+                    />
                     <button
                       type="button"
-                      onClick={() => startEditFolder(folder)}
-                      className="rounded-2xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
-                      title="Ändra mapp"
+                      onClick={() => createSection(folder.id)}
+                      className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 px-5 py-3 font-medium text-slate-700"
                     >
-                      <Pencil className="h-4 w-4" />
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => deleteFolder(folder.id)}
-                      className="rounded-2xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-rose-600"
-                      title="Ta bort mapp"
-                    >
-                      <Trash2 className="h-4 w-4" />
+                      <Plus className="h-4 w-4" />
+                      Lägg till section
                     </button>
                   </div>
-                </div>
 
-                {editingFolderId === folder.id ? (
-                  <div className="mt-4 grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-[1fr_150px_70px_auto_auto]">
-                    <input
-                      value={editingFolderName}
-                      onChange={(e) => setEditingFolderName(e.target.value)}
-                      className="rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-400"
-                      placeholder="Mappnamn"
-                    />
+                  <div className="grid gap-5 lg:grid-cols-2">
+                    {folder.sections.map((section) => {
+                      const draftKey = `${folder.id}-${section.id}`;
+                      const draft = drafts[draftKey] || {
+                        text: "",
+                        assignedTo: currentUserId,
+                        priority: "medium",
+                      };
 
-                    <select
-                      value={editingFolderIcon}
-                      onChange={(e) => setEditingFolderIcon(e.target.value)}
-                      className="rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-400"
-                    >
-                      <option value="folder">📁 Standard</option>
-                      <option value="home">🏠 Hemma</option>
-                      <option value="shopping">🛒 Handla</option>
-                      <option value="work">💼 Jobb</option>
-                      <option value="bedroom">🛏 Sovrum</option>
-                      <option value="bathroom">🛁 Badrum</option>
-                      <option value="kitchen">🍳 Kök</option>
-                      <option value="box">📦 Övrigt</option>
-                    </select>
+                      const visibleItems = section.items.filter((item) => {
+                        if (filter === "mina") return item.assigned_to === currentUserId;
+                        if (filter === "öppna") return !item.done;
+                        if (filter === "klara") return item.done;
+                        return true;
+                      });
 
-                    <input
-                      type="color"
-                      value={editingFolderColor}
-                      onChange={(e) => setEditingFolderColor(e.target.value)}
-                      className="h-12 w-full rounded-2xl border border-slate-200 bg-white p-1"
-                    />
-
-                    <button
-                      type="button"
-                      onClick={saveFolderEdit}
-                      className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 font-medium text-white"
-                    >
-                      <Save className="h-4 w-4" />
-                      Spara
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={cancelEditFolder}
-                      className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 font-medium text-slate-700"
-                    >
-                      <X className="h-4 w-4" />
-                      Avbryt
-                    </button>
-                  </div>
-                ) : null}
-
-                {openFolders[folder.id] ? (
-                  <div className="mt-5">
-                    <div className="mb-5 grid gap-3 md:grid-cols-[1fr_auto]">
-                      <input
-                        value={newSectionNames[folder.id] || ""}
-                        onChange={(e) =>
-                          setNewSectionNames((prev) => ({
-                            ...prev,
-                            [folder.id]: e.target.value,
-                          }))
-                        }
-                        onKeyDown={(e) => e.key === "Enter" && createSection(folder.id)}
-                        placeholder={`Ny underrubrik i ${folder.name}, t.ex. Kök`}
-                        className="rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-400"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => createSection(folder.id)}
-                        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 px-5 py-3 font-medium text-slate-700"
-                      >
-                        <Plus className="h-4 w-4" />
-                        Lägg till underrubrik
-                      </button>
-                    </div>
-
-                    <div className="grid gap-5 lg:grid-cols-2">
-                      {folder.sections.map((section) => {
-                        const draftKey = `${folder.id}-${section.id}`;
-                        const draft = drafts[draftKey] || {
-                          text: "",
-                          assignedTo: currentUser.id,
-                          priority: "medium",
-                        };
-
-                        const visibleItems = section.items.filter((item) => {
-                          if (filter === "mina") return item.assigned_to === currentUser.id;
-                          if (filter === "öppna") return !item.done;
-                          if (filter === "klara") return item.done;
-                          return true;
-                        });
-
-                        return (
-                          <div
-                            key={section.id}
-                            className="rounded-[24px] border border-slate-200 p-4"
-                          >
-                            <div className="flex items-start justify-between gap-3">
-                              {editingSectionId === section.id ? (
-                                <div className="flex flex-1 flex-col gap-3 md:flex-row">
-                                  <input
-                                    value={editingSectionName}
-                                    onChange={(e) => setEditingSectionName(e.target.value)}
-                                    className="flex-1 rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-400"
-                                  />
-                                  <div className="flex gap-2">
-                                    <button
-                                      type="button"
-                                      onClick={saveSectionEdit}
-                                      className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 font-medium text-white"
-                                    >
-                                      <Save className="h-4 w-4" />
-                                      Spara
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={cancelEditSection}
-                                      className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 font-medium text-slate-700"
-                                    >
-                                      <X className="h-4 w-4" />
-                                      Avbryt
-                                    </button>
-                                  </div>
-                                </div>
-                              ) : (
-                                <>
-                                  <div>
-                                    <h3 className="text-lg font-semibold text-slate-900">
-                                      {section.name}
-                                    </h3>
-                                    <p className="text-sm text-slate-500">
-                                      {visibleItems.length} uppgifter visas
-                                    </p>
-                                  </div>
-
-                                  <div className="flex items-center gap-2">
-                                    <button
-                                      type="button"
-                                      onClick={() => startEditSection(section)}
-                                      className="rounded-2xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
-                                      title="Ändra underrubrik"
-                                    >
-                                      <Pencil className="h-4 w-4" />
-                                    </button>
-
-                                    <button
-                                      type="button"
-                                      onClick={() => deleteSection(section.id)}
-                                      className="rounded-2xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-rose-600"
-                                      title="Ta bort underrubrik"
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                    </button>
-                                  </div>
-                                </>
-                              )}
+                      return (
+                        <div
+                          key={section.id}
+                          className="rounded-[24px] border border-slate-200 p-4"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <h3 className="text-lg font-semibold text-slate-900">
+                                {section.name}
+                              </h3>
+                              <p className="text-sm text-slate-500">
+                                {visibleItems.length} uppgifter visas
+                              </p>
                             </div>
 
-                            <div className="mt-4 space-y-3">
-                              <input
-                                value={draft.text}
+                            <button
+                              type="button"
+                              onClick={() => deleteSection(section.id)}
+                              className="rounded-2xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-rose-600"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+
+                          <div className="mt-4 space-y-3">
+                            <input
+                              value={draft.text}
+                              onChange={(e) =>
+                                setDrafts((prev) => ({
+                                  ...prev,
+                                  [draftKey]: { ...draft, text: e.target.value },
+                                }))
+                              }
+                              onKeyDown={(e) => e.key === "Enter" && addItem(folder.id, section.id)}
+                              placeholder="Lägg till uppgift"
+                              className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-400"
+                            />
+
+                            <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto]">
+                              <select
+                                value={draft.assignedTo || currentUserId}
                                 onChange={(e) =>
                                   setDrafts((prev) => ({
                                     ...prev,
-                                    [draftKey]: { ...draft, text: e.target.value },
+                                    [draftKey]: { ...draft, assignedTo: e.target.value },
                                   }))
                                 }
-                                onKeyDown={(e) =>
-                                  e.key === "Enter" && addItem(folder.id, section.id)
+                                className="rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-400"
+                              >
+                                {members.map((member) => (
+                                  <option key={member.user_id} value={member.user_id}>
+                                    Tilldela {member.full_name}
+                                  </option>
+                                ))}
+                              </select>
+
+                              <select
+                                value={draft.priority || "medium"}
+                                onChange={(e) =>
+                                  setDrafts((prev) => ({
+                                    ...prev,
+                                    [draftKey]: { ...draft, priority: e.target.value },
+                                  }))
                                 }
-                                placeholder="Lägg till uppgift"
-                                className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-400"
-                              />
+                                className="rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-400"
+                              >
+                                <option value="high">🔴 Hög</option>
+                                <option value="medium">🟡 Medel</option>
+                                <option value="low">🟢 Låg</option>
+                              </select>
 
-                              <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto]">
-                                <select
-                                  value={draft.assignedTo || currentUser.id}
-                                  onChange={(e) =>
-                                    setDrafts((prev) => ({
-                                      ...prev,
-                                      [draftKey]: { ...draft, assignedTo: e.target.value },
-                                    }))
-                                  }
-                                  className="rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-400"
-                                >
-                                  {USERS.map((user) => (
-                                    <option key={user.id} value={user.id}>
-                                      Tilldela {user.name}
-                                    </option>
-                                  ))}
-                                </select>
-
-                                <select
-                                  value={draft.priority || "medium"}
-                                  onChange={(e) =>
-                                    setDrafts((prev) => ({
-                                      ...prev,
-                                      [draftKey]: { ...draft, priority: e.target.value },
-                                    }))
-                                  }
-                                  className="rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-400"
-                                >
-                                  <option value="high">🔴 Hög</option>
-                                  <option value="medium">🟡 Medel</option>
-                                  <option value="low">🟢 Låg</option>
-                                </select>
-
-                                <button
-                                  type="button"
-                                  onClick={() => addItem(folder.id, section.id)}
-                                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 font-medium text-white"
-                                >
-                                  <Plus className="h-4 w-4" />
-                                  Lägg till
-                                </button>
-                              </div>
-                            </div>
-
-                            <div className="mt-4 space-y-3">
-                              {visibleItems.length === 0 ? (
-                                <div className="rounded-2xl border border-dashed border-slate-200 px-4 py-6 text-center text-sm text-slate-500">
-                                  Inga uppgifter här än.
-                                </div>
-                              ) : (
-                                visibleItems.map((item) => {
-                                  const assignedUser = USERS.find(
-                                    (u) => u.id === item.assigned_to
-                                  );
-                                  const createdUser = USERS.find(
-                                    (u) => u.id === item.created_by
-                                  );
-
-                                  return (
-                                    <div
-                                      key={item.id}
-                                      className={`rounded-2xl border px-4 py-3 ${priorityClasses(
-                                        item.priority,
-                                        item.done
-                                      )}`}
-                                    >
-                                      {editingItemId === item.id ? (
-                                        <div className="space-y-3">
-                                          <input
-                                            value={editingItemText}
-                                            onChange={(e) => setEditingItemText(e.target.value)}
-                                            className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-400"
-                                          />
-
-                                          <div className="grid gap-3 md:grid-cols-2">
-                                            <select
-                                              value={editingItemAssignedTo}
-                                              onChange={(e) => setEditingItemAssignedTo(e.target.value)}
-                                              className="rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-400"
-                                            >
-                                              {USERS.map((user) => (
-                                                <option key={user.id} value={user.id}>
-                                                  Tilldela {user.name}
-                                                </option>
-                                              ))}
-                                            </select>
-
-                                            <select
-                                              value={editingItemPriority}
-                                              onChange={(e) => setEditingItemPriority(e.target.value)}
-                                              className="rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-400"
-                                            >
-                                              <option value="high">🔴 Hög</option>
-                                              <option value="medium">🟡 Medel</option>
-                                              <option value="low">🟢 Låg</option>
-                                            </select>
-                                          </div>
-
-                                          <div className="flex gap-2">
-                                            <button
-                                              type="button"
-                                              onClick={saveItemEdit}
-                                              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 font-medium text-white"
-                                            >
-                                              <Save className="h-4 w-4" />
-                                              Spara
-                                            </button>
-                                            <button
-                                              type="button"
-                                              onClick={cancelEditItem}
-                                              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 font-medium text-slate-700"
-                                            >
-                                              <X className="h-4 w-4" />
-                                              Avbryt
-                                            </button>
-                                          </div>
-                                        </div>
-                                      ) : (
-                                        <div className="flex items-center gap-3">
-                                          <button
-                                            type="button"
-                                            onClick={() => toggleItem(item.id, item.done)}
-                                            className={`flex h-6 w-6 items-center justify-center rounded-full border ${
-                                              item.done
-                                                ? "border-emerald-500 bg-emerald-500 text-white"
-                                                : "border-slate-300 bg-white text-transparent"
-                                            }`}
-                                          >
-                                            <Check className="h-4 w-4" />
-                                          </button>
-
-                                          <div className="min-w-0 flex-1">
-                                            <div
-                                              className={`font-medium ${
-                                                item.done
-                                                  ? "text-slate-500 line-through"
-                                                  : "text-slate-900"
-                                              }`}
-                                            >
-                                              {item.text}
-                                            </div>
-
-                                            <div className="mt-1 flex flex-wrap gap-3 text-xs text-slate-500">
-                                              <span>
-                                                Skapad av {createdUser?.name || "okänd"}
-                                              </span>
-                                              <span>
-                                                Tilldelad {assignedUser?.name || "okänd"}
-                                              </span>
-                                              <span>{priorityLabel(item.priority)}</span>
-                                            </div>
-                                          </div>
-
-                                          <div className="flex items-center gap-2">
-                                            <button
-                                              type="button"
-                                              onClick={() => startEditItem(item)}
-                                              className="rounded-xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
-                                            >
-                                              <Pencil className="h-4 w-4" />
-                                            </button>
-
-                                            <button
-                                              type="button"
-                                              onClick={() => deleteItem(item.id)}
-                                              className="rounded-xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-rose-600"
-                                            >
-                                              <Trash2 className="h-4 w-4" />
-                                            </button>
-                                          </div>
-                                        </div>
-                                      )}
-                                    </div>
-                                  );
-                                })
-                              )}
+                              <button
+                                type="button"
+                                onClick={() => addItem(folder.id, section.id)}
+                                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 font-medium text-white"
+                              >
+                                <Plus className="h-4 w-4" />
+                                Lägg till
+                              </button>
                             </div>
                           </div>
-                        );
-                      })}
-                    </div>
+
+                          <div className="mt-4 space-y-3">
+                            {visibleItems.length === 0 ? (
+                              <div className="rounded-2xl border border-dashed border-slate-200 px-4 py-6 text-center text-sm text-slate-500">
+                                Inga uppgifter här än.
+                              </div>
+                            ) : (
+                              visibleItems.map((item) => (
+                                <div
+                                  key={item.id}
+                                  className={`flex items-center gap-3 rounded-2xl border px-4 py-3 ${
+                                    item.done
+                                      ? "border-emerald-200 bg-emerald-50"
+                                      : item.priority === "high"
+                                      ? "border-rose-200 bg-rose-50"
+                                      : item.priority === "low"
+                                      ? "border-emerald-200 bg-emerald-50/40"
+                                      : "border-amber-200 bg-amber-50"
+                                  }`}
+                                >
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleItem(item.id, item.done)}
+                                    className={`flex h-6 w-6 items-center justify-center rounded-full border ${
+                                      item.done
+                                        ? "border-emerald-500 bg-emerald-500 text-white"
+                                        : "border-slate-300 bg-white text-transparent"
+                                    }`}
+                                  >
+                                    <Check className="h-4 w-4" />
+                                  </button>
+
+                                  <div className="min-w-0 flex-1">
+                                    <div
+                                      className={`font-medium ${
+                                        item.done
+                                          ? "text-slate-500 line-through"
+                                          : "text-slate-900"
+                                      }`}
+                                    >
+                                      {item.text}
+                                    </div>
+
+                                    <div className="mt-1 flex flex-wrap gap-3 text-xs text-slate-500">
+                                      <span>Skapad av {memberMap[item.created_by] || "Okänd"}</span>
+                                      <span>
+                                        Tilldelad {memberMap[item.assigned_to] || "Okänd"}
+                                      </span>
+                                      <span>{priorityLabel(item.priority)}</span>
+                                    </div>
+                                  </div>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => deleteItem(item.id)}
+                                    className="rounded-xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-rose-600"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                ) : null}
-              </div>
-            ))}
-          </div>
-        )}
+                </div>
+              ) : null}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

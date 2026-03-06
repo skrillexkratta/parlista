@@ -9,7 +9,6 @@ import {
   LogIn,
   LogOut,
   Plus,
-  ShoppingCart,
   Trash2,
   User2,
   Users,
@@ -18,6 +17,10 @@ import {
   Bath,
   CookingPot,
   Package,
+  ShoppingCart,
+  Pencil,
+  Save,
+  X,
 } from "lucide-react";
 import { supabase } from "./supabase";
 
@@ -202,6 +205,10 @@ export default function App() {
   const [drafts, setDrafts] = useState({});
   const [filter, setFilter] = useState("alla");
   const [openFolders, setOpenFolders] = useState({});
+  const [editingFolderId, setEditingFolderId] = useState(null);
+  const [editingFolderName, setEditingFolderName] = useState("");
+  const [editingFolderColor, setEditingFolderColor] = useState("#0f172a");
+  const [editingFolderIcon, setEditingFolderIcon] = useState("folder");
   const [loading, setLoading] = useState(true);
 
   const currentUser = USERS.find((u) => u.id === currentUserId) || null;
@@ -286,6 +293,42 @@ export default function App() {
     setNewFolderName("");
     setNewFolderColor("#0f172a");
     setNewFolderIcon("folder");
+    loadData();
+  };
+
+  const startEditFolder = (folder) => {
+    setEditingFolderId(folder.id);
+    setEditingFolderName(folder.name || "");
+    setEditingFolderColor(folder.color || "#0f172a");
+    setEditingFolderIcon(folder.icon || "folder");
+  };
+
+  const cancelEditFolder = () => {
+    setEditingFolderId(null);
+    setEditingFolderName("");
+    setEditingFolderColor("#0f172a");
+    setEditingFolderIcon("folder");
+  };
+
+  const saveFolderEdit = async () => {
+    const name = editingFolderName.trim();
+    if (!name || !editingFolderId) return;
+
+    const { error } = await supabase
+      .from("folders")
+      .update({
+        name,
+        color: editingFolderColor,
+        icon: editingFolderIcon,
+      })
+      .eq("id", editingFolderId);
+
+    if (error) {
+      console.error(error);
+      return;
+    }
+
+    cancelEditFolder();
     loadData();
   };
 
@@ -522,15 +565,77 @@ export default function App() {
                     </div>
                   </button>
 
-                  <button
-                    type="button"
-                    onClick={() => deleteFolder(folder.id)}
-                    className="rounded-2xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-rose-600"
-                    title="Ta bort mapp"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => startEditFolder(folder)}
+                      className="rounded-2xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                      title="Ändra mapp"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => deleteFolder(folder.id)}
+                      className="rounded-2xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-rose-600"
+                      title="Ta bort mapp"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
+
+                {editingFolderId === folder.id ? (
+                  <div className="mt-4 grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-[1fr_150px_70px_auto_auto]">
+                    <input
+                      value={editingFolderName}
+                      onChange={(e) => setEditingFolderName(e.target.value)}
+                      className="rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-400"
+                      placeholder="Mappnamn"
+                    />
+
+                    <select
+                      value={editingFolderIcon}
+                      onChange={(e) => setEditingFolderIcon(e.target.value)}
+                      className="rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-400"
+                    >
+                      <option value="folder">📁 Standard</option>
+                      <option value="home">🏠 Hemma</option>
+                      <option value="shopping">🛒 Handla</option>
+                      <option value="work">💼 Jobb</option>
+                      <option value="bedroom">🛏 Sovrum</option>
+                      <option value="bathroom">🛁 Badrum</option>
+                      <option value="kitchen">🍳 Kök</option>
+                      <option value="box">📦 Övrigt</option>
+                    </select>
+
+                    <input
+                      type="color"
+                      value={editingFolderColor}
+                      onChange={(e) => setEditingFolderColor(e.target.value)}
+                      className="h-12 w-full rounded-2xl border border-slate-200 bg-white p-1"
+                    />
+
+                    <button
+                      type="button"
+                      onClick={saveFolderEdit}
+                      className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 font-medium text-white"
+                    >
+                      <Save className="h-4 w-4" />
+                      Spara
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={cancelEditFolder}
+                      className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 font-medium text-slate-700"
+                    >
+                      <X className="h-4 w-4" />
+                      Avbryt
+                    </button>
+                  </div>
+                ) : null}
 
                 {openFolders[folder.id] ? (
                   <div className="mt-5">

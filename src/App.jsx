@@ -205,10 +205,20 @@ export default function App() {
   const [drafts, setDrafts] = useState({});
   const [filter, setFilter] = useState("alla");
   const [openFolders, setOpenFolders] = useState({});
+
   const [editingFolderId, setEditingFolderId] = useState(null);
   const [editingFolderName, setEditingFolderName] = useState("");
   const [editingFolderColor, setEditingFolderColor] = useState("#0f172a");
   const [editingFolderIcon, setEditingFolderIcon] = useState("folder");
+
+  const [editingSectionId, setEditingSectionId] = useState(null);
+  const [editingSectionName, setEditingSectionName] = useState("");
+
+  const [editingItemId, setEditingItemId] = useState(null);
+  const [editingItemText, setEditingItemText] = useState("");
+  const [editingItemPriority, setEditingItemPriority] = useState("medium");
+  const [editingItemAssignedTo, setEditingItemAssignedTo] = useState("Eddy");
+
   const [loading, setLoading] = useState(true);
 
   const currentUser = USERS.find((u) => u.id === currentUserId) || null;
@@ -349,6 +359,34 @@ export default function App() {
     loadData();
   };
 
+  const startEditSection = (section) => {
+    setEditingSectionId(section.id);
+    setEditingSectionName(section.name || "");
+  };
+
+  const cancelEditSection = () => {
+    setEditingSectionId(null);
+    setEditingSectionName("");
+  };
+
+  const saveSectionEdit = async () => {
+    const name = editingSectionName.trim();
+    if (!name || !editingSectionId) return;
+
+    const { error } = await supabase
+      .from("sections")
+      .update({ name })
+      .eq("id", editingSectionId);
+
+    if (error) {
+      console.error(error);
+      return;
+    }
+
+    cancelEditSection();
+    loadData();
+  };
+
   const deleteFolder = async (folderId) => {
     const { error } = await supabase.from("folders").delete().eq("id", folderId);
     if (error) {
@@ -401,6 +439,42 @@ export default function App() {
       },
     }));
 
+    loadData();
+  };
+
+  const startEditItem = (item) => {
+    setEditingItemId(item.id);
+    setEditingItemText(item.text || "");
+    setEditingItemPriority(item.priority || "medium");
+    setEditingItemAssignedTo(item.assigned_to || currentUserId);
+  };
+
+  const cancelEditItem = () => {
+    setEditingItemId(null);
+    setEditingItemText("");
+    setEditingItemPriority("medium");
+    setEditingItemAssignedTo(currentUserId || "Eddy");
+  };
+
+  const saveItemEdit = async () => {
+    const text = editingItemText.trim();
+    if (!text || !editingItemId) return;
+
+    const { error } = await supabase
+      .from("items")
+      .update({
+        text,
+        priority: editingItemPriority,
+        assigned_to: editingItemAssignedTo,
+      })
+      .eq("id", editingItemId);
+
+    if (error) {
+      console.error(error);
+      return;
+    }
+
+    cancelEditItem();
     loadData();
   };
 
@@ -684,23 +758,64 @@ export default function App() {
                             className="rounded-[24px] border border-slate-200 p-4"
                           >
                             <div className="flex items-start justify-between gap-3">
-                              <div>
-                                <h3 className="text-lg font-semibold text-slate-900">
-                                  {section.name}
-                                </h3>
-                                <p className="text-sm text-slate-500">
-                                  {visibleItems.length} uppgifter visas
-                                </p>
-                              </div>
+                              {editingSectionId === section.id ? (
+                                <div className="flex flex-1 flex-col gap-3 md:flex-row">
+                                  <input
+                                    value={editingSectionName}
+                                    onChange={(e) => setEditingSectionName(e.target.value)}
+                                    className="flex-1 rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-400"
+                                  />
+                                  <div className="flex gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={saveSectionEdit}
+                                      className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 font-medium text-white"
+                                    >
+                                      <Save className="h-4 w-4" />
+                                      Spara
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={cancelEditSection}
+                                      className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 font-medium text-slate-700"
+                                    >
+                                      <X className="h-4 w-4" />
+                                      Avbryt
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <>
+                                  <div>
+                                    <h3 className="text-lg font-semibold text-slate-900">
+                                      {section.name}
+                                    </h3>
+                                    <p className="text-sm text-slate-500">
+                                      {visibleItems.length} uppgifter visas
+                                    </p>
+                                  </div>
 
-                              <button
-                                type="button"
-                                onClick={() => deleteSection(section.id)}
-                                className="rounded-2xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-rose-600"
-                                title="Ta bort underrubrik"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => startEditSection(section)}
+                                      className="rounded-2xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                                      title="Ändra underrubrik"
+                                    >
+                                      <Pencil className="h-4 w-4" />
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      onClick={() => deleteSection(section.id)}
+                                      className="rounded-2xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-rose-600"
+                                      title="Ta bort underrubrik"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </button>
+                                  </div>
+                                </>
+                              )}
                             </div>
 
                             <div className="mt-4 space-y-3">
@@ -780,52 +895,117 @@ export default function App() {
                                   return (
                                     <div
                                       key={item.id}
-                                      className={`flex items-center gap-3 rounded-2xl border px-4 py-3 ${priorityClasses(
+                                      className={`rounded-2xl border px-4 py-3 ${priorityClasses(
                                         item.priority,
                                         item.done
                                       )}`}
                                     >
-                                      <button
-                                        type="button"
-                                        onClick={() => toggleItem(item.id, item.done)}
-                                        className={`flex h-6 w-6 items-center justify-center rounded-full border ${
-                                          item.done
-                                            ? "border-emerald-500 bg-emerald-500 text-white"
-                                            : "border-slate-300 bg-white text-transparent"
-                                        }`}
-                                      >
-                                        <Check className="h-4 w-4" />
-                                      </button>
+                                      {editingItemId === item.id ? (
+                                        <div className="space-y-3">
+                                          <input
+                                            value={editingItemText}
+                                            onChange={(e) => setEditingItemText(e.target.value)}
+                                            className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-400"
+                                          />
 
-                                      <div className="min-w-0 flex-1">
-                                        <div
-                                          className={`font-medium ${
-                                            item.done
-                                              ? "text-slate-500 line-through"
-                                              : "text-slate-900"
-                                          }`}
-                                        >
-                                          {item.text}
+                                          <div className="grid gap-3 md:grid-cols-2">
+                                            <select
+                                              value={editingItemAssignedTo}
+                                              onChange={(e) => setEditingItemAssignedTo(e.target.value)}
+                                              className="rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-400"
+                                            >
+                                              {USERS.map((user) => (
+                                                <option key={user.id} value={user.id}>
+                                                  Tilldela {user.name}
+                                                </option>
+                                              ))}
+                                            </select>
+
+                                            <select
+                                              value={editingItemPriority}
+                                              onChange={(e) => setEditingItemPriority(e.target.value)}
+                                              className="rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-400"
+                                            >
+                                              <option value="high">🔴 Hög</option>
+                                              <option value="medium">🟡 Medel</option>
+                                              <option value="low">🟢 Låg</option>
+                                            </select>
+                                          </div>
+
+                                          <div className="flex gap-2">
+                                            <button
+                                              type="button"
+                                              onClick={saveItemEdit}
+                                              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 font-medium text-white"
+                                            >
+                                              <Save className="h-4 w-4" />
+                                              Spara
+                                            </button>
+                                            <button
+                                              type="button"
+                                              onClick={cancelEditItem}
+                                              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 font-medium text-slate-700"
+                                            >
+                                              <X className="h-4 w-4" />
+                                              Avbryt
+                                            </button>
+                                          </div>
                                         </div>
+                                      ) : (
+                                        <div className="flex items-center gap-3">
+                                          <button
+                                            type="button"
+                                            onClick={() => toggleItem(item.id, item.done)}
+                                            className={`flex h-6 w-6 items-center justify-center rounded-full border ${
+                                              item.done
+                                                ? "border-emerald-500 bg-emerald-500 text-white"
+                                                : "border-slate-300 bg-white text-transparent"
+                                            }`}
+                                          >
+                                            <Check className="h-4 w-4" />
+                                          </button>
 
-                                        <div className="mt-1 flex flex-wrap gap-3 text-xs text-slate-500">
-                                          <span>
-                                            Skapad av {createdUser?.name || "okänd"}
-                                          </span>
-                                          <span>
-                                            Tilldelad {assignedUser?.name || "okänd"}
-                                          </span>
-                                          <span>{priorityLabel(item.priority)}</span>
+                                          <div className="min-w-0 flex-1">
+                                            <div
+                                              className={`font-medium ${
+                                                item.done
+                                                  ? "text-slate-500 line-through"
+                                                  : "text-slate-900"
+                                              }`}
+                                            >
+                                              {item.text}
+                                            </div>
+
+                                            <div className="mt-1 flex flex-wrap gap-3 text-xs text-slate-500">
+                                              <span>
+                                                Skapad av {createdUser?.name || "okänd"}
+                                              </span>
+                                              <span>
+                                                Tilldelad {assignedUser?.name || "okänd"}
+                                              </span>
+                                              <span>{priorityLabel(item.priority)}</span>
+                                            </div>
+                                          </div>
+
+                                          <div className="flex items-center gap-2">
+                                            <button
+                                              type="button"
+                                              onClick={() => startEditItem(item)}
+                                              className="rounded-xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                                            >
+                                              <Pencil className="h-4 w-4" />
+                                            </button>
+
+                                            <button
+                                              type="button"
+                                              onClick={() => deleteItem(item.id)}
+                                              className="rounded-xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-rose-600"
+                                            >
+                                              <Trash2 className="h-4 w-4" />
+                                            </button>
+                                          </div>
                                         </div>
-                                      </div>
-
-                                      <button
-                                        type="button"
-                                        onClick={() => deleteItem(item.id)}
-                                        className="rounded-xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-rose-600"
-                                      >
-                                        <Trash2 className="h-4 w-4" />
-                                      </button>
+                                      )}
                                     </div>
                                   );
                                 })

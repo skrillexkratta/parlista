@@ -48,7 +48,7 @@ function LoginScreen({ onLogin }) {
       setError("");
       onLogin(user.id);
     } else {
-      setError("Fel PIN-kod. Testa 1234 för Du eller 5678 för Frun.");
+      setError("Fel PIN-kod. Testa 1234 för Eddy eller 5678 för Paula.");
     }
   };
 
@@ -67,8 +67,8 @@ function LoginScreen({ onLogin }) {
             </h1>
 
             <p className="mt-4 max-w-md text-slate-300">
-              Organisera allt i mappar som Hemma och Handla, med underrubriker som Vardagsrum,
-              Sovrum, Kök eller Veckohandling.
+              Organisera allt i mappar som Hemma och Handla, med underrubriker som
+              Vardagsrum, Sovrum, Kök eller Veckohandling.
             </p>
           </div>
 
@@ -153,6 +153,7 @@ export default function App() {
   const [sections, setSections] = useState([]);
   const [items, setItems] = useState([]);
   const [newFolderName, setNewFolderName] = useState("");
+  const [newFolderColor, setNewFolderColor] = useState("#0f172a");
   const [newSectionNames, setNewSectionNames] = useState({});
   const [drafts, setDrafts] = useState({});
   const [filter, setFilter] = useState("alla");
@@ -164,7 +165,11 @@ export default function App() {
   async function loadData() {
     setLoading(true);
 
-    const [{ data: foldersData, error: foldersError }, { data: sectionsData, error: sectionsError }, { data: itemsData, error: itemsError }] = await Promise.all([
+    const [
+      { data: foldersData, error: foldersError },
+      { data: sectionsData, error: sectionsError },
+      { data: itemsData, error: itemsError },
+    ] = await Promise.all([
       supabase.from("folders").select("*").order("created_at", { ascending: true }),
       supabase.from("sections").select("*").order("created_at", { ascending: true }),
       supabase.from("items").select("*").order("created_at", { ascending: true }),
@@ -221,13 +226,20 @@ export default function App() {
     const name = newFolderName.trim();
     if (!name) return;
 
-    const { error } = await supabase.from("folders").insert([{ name }]);
+    const { error } = await supabase.from("folders").insert([
+      {
+        name,
+        color: newFolderColor,
+      },
+    ]);
+
     if (error) {
       console.error(error);
       return;
     }
 
     setNewFolderName("");
+    setNewFolderColor("#0f172a");
     loadData();
   };
 
@@ -235,7 +247,10 @@ export default function App() {
     const name = (newSectionNames[folderId] || "").trim();
     if (!name) return;
 
-    const { error } = await supabase.from("sections").insert([{ folder_id: folderId, name }]);
+    const { error } = await supabase
+      .from("sections")
+      .insert([{ folder_id: folderId, name }]);
+
     if (error) {
       console.error(error);
       return;
@@ -333,7 +348,9 @@ export default function App() {
               Inloggad som {currentUser.name}
             </div>
             <h1 className="mt-3 text-3xl font-semibold text-slate-900">Våra mappar</h1>
-            <p className="mt-1 text-slate-500">Exempel: Hemma → Vardagsrum / Sovrum / Kök</p>
+            <p className="mt-1 text-slate-500">
+              Exempel: Hemma → Vardagsrum / Sovrum / Kök
+            </p>
           </div>
 
           <button
@@ -352,13 +369,21 @@ export default function App() {
           <StatCard label="Mina kvar" value={myItems} icon={User2} />
         </div>
 
-        <div className="mb-6 grid gap-4 rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-black/5 md:grid-cols-[1fr_auto]">
+        <div className="mb-6 grid gap-4 rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-black/5 md:grid-cols-[1fr_70px_auto]">
           <input
             value={newFolderName}
             onChange={(e) => setNewFolderName(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && createFolder()}
             placeholder="Ny mapp, t.ex. Hemma eller Handla"
             className="rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-400"
+          />
+
+          <input
+            type="color"
+            value={newFolderColor}
+            onChange={(e) => setNewFolderColor(e.target.value)}
+            className="h-12 w-full rounded-2xl border border-slate-200 bg-white p-1"
+            title="Välj färg på mappen"
           />
 
           <button
@@ -400,7 +425,10 @@ export default function App() {
         ) : (
           <div className="space-y-5">
             {foldersWithSections.map((folder) => (
-              <div key={folder.id} className="rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-black/5">
+              <div
+                key={folder.id}
+                className="rounded-[28px] bg-white p-5 shadow-sm ring-1 ring-black/5"
+              >
                 <div className="flex items-center justify-between gap-3">
                   <button
                     type="button"
@@ -412,12 +440,19 @@ export default function App() {
                     ) : (
                       <ChevronRight className="h-5 w-5 text-slate-500" />
                     )}
-                    <div className="rounded-2xl bg-slate-100 p-2 text-slate-700">
+
+                    <div
+                      className="rounded-2xl p-2 text-white"
+                      style={{ backgroundColor: folder.color || "#0f172a" }}
+                    >
                       <Folder className="h-5 w-5" />
                     </div>
+
                     <div>
                       <h2 className="text-xl font-semibold text-slate-900">{folder.name}</h2>
-                      <p className="text-sm text-slate-500">{folder.sections.length} underrubriker</p>
+                      <p className="text-sm text-slate-500">
+                        {folder.sections.length} underrubriker
+                      </p>
                     </div>
                   </button>
 
@@ -437,7 +472,10 @@ export default function App() {
                       <input
                         value={newSectionNames[folder.id] || ""}
                         onChange={(e) =>
-                          setNewSectionNames((prev) => ({ ...prev, [folder.id]: e.target.value }))
+                          setNewSectionNames((prev) => ({
+                            ...prev,
+                            [folder.id]: e.target.value,
+                          }))
                         }
                         onKeyDown={(e) => e.key === "Enter" && createSection(folder.id)}
                         placeholder={`Ny underrubrik i ${folder.name}, t.ex. Kök`}
@@ -456,7 +494,10 @@ export default function App() {
                     <div className="grid gap-5 lg:grid-cols-2">
                       {folder.sections.map((section) => {
                         const draftKey = `${folder.id}-${section.id}`;
-                        const draft = drafts[draftKey] || { text: "", assignedTo: currentUser.id };
+                        const draft = drafts[draftKey] || {
+                          text: "",
+                          assignedTo: currentUser.id,
+                        };
 
                         const visibleItems = section.items.filter((item) => {
                           if (filter === "mina") return item.assigned_to === currentUser.id;
@@ -466,12 +507,20 @@ export default function App() {
                         });
 
                         return (
-                          <div key={section.id} className="rounded-[24px] border border-slate-200 p-4">
+                          <div
+                            key={section.id}
+                            className="rounded-[24px] border border-slate-200 p-4"
+                          >
                             <div className="flex items-start justify-between gap-3">
                               <div>
-                                <h3 className="text-lg font-semibold text-slate-900">{section.name}</h3>
-                                <p className="text-sm text-slate-500">{visibleItems.length} uppgifter visas</p>
+                                <h3 className="text-lg font-semibold text-slate-900">
+                                  {section.name}
+                                </h3>
+                                <p className="text-sm text-slate-500">
+                                  {visibleItems.length} uppgifter visas
+                                </p>
                               </div>
+
                               <button
                                 type="button"
                                 onClick={() => deleteSection(section.id)}
@@ -491,10 +540,13 @@ export default function App() {
                                     [draftKey]: { ...draft, text: e.target.value },
                                   }))
                                 }
-                                onKeyDown={(e) => e.key === "Enter" && addItem(folder.id, section.id)}
+                                onKeyDown={(e) =>
+                                  e.key === "Enter" && addItem(folder.id, section.id)
+                                }
                                 placeholder="Lägg till uppgift"
                                 className="rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-400"
                               />
+
                               <select
                                 value={draft.assignedTo || currentUser.id}
                                 onChange={(e) =>
@@ -511,6 +563,7 @@ export default function App() {
                                   </option>
                                 ))}
                               </select>
+
                               <button
                                 type="button"
                                 onClick={() => addItem(folder.id, section.id)}
@@ -528,8 +581,12 @@ export default function App() {
                                 </div>
                               ) : (
                                 visibleItems.map((item) => {
-                                  const assignedUser = USERS.find((u) => u.id === item.assigned_to);
-                                  const createdUser = USERS.find((u) => u.id === item.created_by);
+                                  const assignedUser = USERS.find(
+                                    (u) => u.id === item.assigned_to
+                                  );
+                                  const createdUser = USERS.find(
+                                    (u) => u.id === item.created_by
+                                  );
 
                                   return (
                                     <div
@@ -555,14 +612,17 @@ export default function App() {
                                       <div className="min-w-0 flex-1">
                                         <div
                                           className={`font-medium ${
-                                            item.done ? "text-slate-500 line-through" : "text-slate-900"
+                                            item.done
+                                              ? "text-slate-500 line-through"
+                                              : "text-slate-900"
                                           }`}
                                         >
                                           {item.text}
                                         </div>
 
                                         <div className="mt-1 text-xs text-slate-500">
-                                          Skapad av {createdUser?.name || "okänd"} • Tilldelad {assignedUser?.name || "okänd"}
+                                          Skapad av {createdUser?.name || "okänd"} • Tilldelad{" "}
+                                          {assignedUser?.name || "okänd"}
                                         </div>
                                       </div>
 

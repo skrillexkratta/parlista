@@ -4,13 +4,20 @@ import {
   ChevronDown,
   ChevronRight,
   Folder,
+  Home,
   ListTodo,
   LogIn,
   LogOut,
   Plus,
+  ShoppingCart,
   Trash2,
   User2,
   Users,
+  Briefcase,
+  BedDouble,
+  Bath,
+  CookingPot,
+  Package,
 } from "lucide-react";
 import { supabase } from "./supabase";
 
@@ -153,11 +160,34 @@ function priorityLabel(priority) {
   return "🟡 Medel";
 }
 
-function repeatLabel(repeat) {
-  if (repeat === "daily") return "Dagligen";
-  if (repeat === "weekly") return "Varje vecka";
-  if (repeat === "monthly") return "Varje månad";
-  return "Ingen";
+function priorityClasses(priority, done) {
+  if (done) return "border-emerald-200 bg-emerald-50";
+  if (priority === "high") return "border-rose-200 bg-rose-50";
+  if (priority === "low") return "border-emerald-200 bg-emerald-50/40";
+  return "border-amber-200 bg-amber-50";
+}
+
+function getFolderIcon(iconName) {
+  const className = "h-5 w-5";
+
+  switch (iconName) {
+    case "home":
+      return <Home className={className} />;
+    case "shopping":
+      return <ShoppingCart className={className} />;
+    case "work":
+      return <Briefcase className={className} />;
+    case "bedroom":
+      return <BedDouble className={className} />;
+    case "bathroom":
+      return <Bath className={className} />;
+    case "kitchen":
+      return <CookingPot className={className} />;
+    case "box":
+      return <Package className={className} />;
+    default:
+      return <Folder className={className} />;
+  }
 }
 
 export default function App() {
@@ -167,6 +197,7 @@ export default function App() {
   const [items, setItems] = useState([]);
   const [newFolderName, setNewFolderName] = useState("");
   const [newFolderColor, setNewFolderColor] = useState("#0f172a");
+  const [newFolderIcon, setNewFolderIcon] = useState("folder");
   const [newSectionNames, setNewSectionNames] = useState({});
   const [drafts, setDrafts] = useState({});
   const [filter, setFilter] = useState("alla");
@@ -243,6 +274,7 @@ export default function App() {
       {
         name,
         color: newFolderColor,
+        icon: newFolderIcon,
       },
     ]);
 
@@ -253,6 +285,7 @@ export default function App() {
 
     setNewFolderName("");
     setNewFolderColor("#0f172a");
+    setNewFolderIcon("folder");
     loadData();
   };
 
@@ -306,8 +339,6 @@ export default function App() {
         text,
         done: false,
         priority: draft.priority || "medium",
-        deadline: draft.deadline || null,
-        repeat: draft.repeat || "none",
         created_by: currentUser.id,
         assigned_to: draft.assignedTo || currentUser.id,
       },
@@ -324,8 +355,6 @@ export default function App() {
         text: "",
         assignedTo: currentUser.id,
         priority: "medium",
-        deadline: "",
-        repeat: "none",
       },
     }));
 
@@ -391,7 +420,7 @@ export default function App() {
           <StatCard label="Mina kvar" value={myItems} icon={User2} />
         </div>
 
-        <div className="mb-6 grid gap-4 rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-black/5 md:grid-cols-[1fr_70px_auto]">
+        <div className="mb-6 grid gap-4 rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-black/5 md:grid-cols-[1fr_150px_70px_auto]">
           <input
             value={newFolderName}
             onChange={(e) => setNewFolderName(e.target.value)}
@@ -399,6 +428,21 @@ export default function App() {
             placeholder="Ny mapp, t.ex. Hemma eller Handla"
             className="rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-400"
           />
+
+          <select
+            value={newFolderIcon}
+            onChange={(e) => setNewFolderIcon(e.target.value)}
+            className="rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-400"
+          >
+            <option value="folder">📁 Standard</option>
+            <option value="home">🏠 Hemma</option>
+            <option value="shopping">🛒 Handla</option>
+            <option value="work">💼 Jobb</option>
+            <option value="bedroom">🛏 Sovrum</option>
+            <option value="bathroom">🛁 Badrum</option>
+            <option value="kitchen">🍳 Kök</option>
+            <option value="box">📦 Övrigt</option>
+          </select>
 
           <input
             type="color"
@@ -467,7 +511,7 @@ export default function App() {
                       className="rounded-2xl p-2 text-white"
                       style={{ backgroundColor: folder.color || "#0f172a" }}
                     >
-                      <Folder className="h-5 w-5" />
+                      {getFolderIcon(folder.icon)}
                     </div>
 
                     <div>
@@ -520,8 +564,6 @@ export default function App() {
                           text: "",
                           assignedTo: currentUser.id,
                           priority: "medium",
-                          deadline: "",
-                          repeat: "none",
                         };
 
                         const visibleItems = section.items.filter((item) => {
@@ -572,7 +614,7 @@ export default function App() {
                                 className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-400"
                               />
 
-                              <div className="grid gap-3 md:grid-cols-3">
+                              <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto]">
                                 <select
                                   value={draft.assignedTo || currentUser.id}
                                   onChange={(e) =>
@@ -605,36 +647,6 @@ export default function App() {
                                   <option value="low">🟢 Låg</option>
                                 </select>
 
-                                <select
-                                  value={draft.repeat || "none"}
-                                  onChange={(e) =>
-                                    setDrafts((prev) => ({
-                                      ...prev,
-                                      [draftKey]: { ...draft, repeat: e.target.value },
-                                    }))
-                                  }
-                                  className="rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-400"
-                                >
-                                  <option value="none">Ingen repetition</option>
-                                  <option value="daily">Dagligen</option>
-                                  <option value="weekly">Varje vecka</option>
-                                  <option value="monthly">Varje månad</option>
-                                </select>
-                              </div>
-
-                              <div className="grid gap-3 md:grid-cols-[1fr_auto]">
-                                <input
-                                  type="date"
-                                  value={draft.deadline || ""}
-                                  onChange={(e) =>
-                                    setDrafts((prev) => ({
-                                      ...prev,
-                                      [draftKey]: { ...draft, deadline: e.target.value },
-                                    }))
-                                  }
-                                  className="rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-400"
-                                />
-
                                 <button
                                   type="button"
                                   onClick={() => addItem(folder.id, section.id)}
@@ -663,11 +675,10 @@ export default function App() {
                                   return (
                                     <div
                                       key={item.id}
-                                      className={`flex items-center gap-3 rounded-2xl border px-4 py-3 ${
+                                      className={`flex items-center gap-3 rounded-2xl border px-4 py-3 ${priorityClasses(
+                                        item.priority,
                                         item.done
-                                          ? "border-emerald-200 bg-emerald-50"
-                                          : "border-slate-200 bg-white"
-                                      }`}
+                                      )}`}
                                     >
                                       <button
                                         type="button"
@@ -700,10 +711,6 @@ export default function App() {
                                             Tilldelad {assignedUser?.name || "okänd"}
                                           </span>
                                           <span>{priorityLabel(item.priority)}</span>
-                                          {item.deadline ? <span>📅 {item.deadline}</span> : null}
-                                          {item.repeat && item.repeat !== "none" ? (
-                                            <span>🔁 {repeatLabel(item.repeat)}</span>
-                                          ) : null}
                                         </div>
                                       </div>
 

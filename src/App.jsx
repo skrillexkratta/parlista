@@ -613,10 +613,32 @@ export default function App() {
                 <Users className="h-4 w-4" />
                 {household.name}
               </div>
-              <h1 className="mt-3 text-3xl font-semibold text-slate-900">Våra mappar</h1>
-              <p className="mt-1 text-slate-500">
-                Invite code: <span className="font-medium">{household.invite_code}</span>
-              </p>
+
+              <div className="mt-2 flex flex-wrap gap-2 text-sm text-slate-600">
+                {members.map((member) => (
+                  <span
+                    key={member.user_id}
+                    className="rounded-full bg-slate-100 px-3 py-1"
+                  >
+                    {member.full_name}
+                  </span>
+                ))}
+              </div>
+
+              <div className="mt-2 flex items-center gap-3 text-slate-500">
+                <span>
+                  Invite code: <span className="font-medium">{household.invite_code}</span>
+                </span>
+
+                <button
+                  type="button"
+                  onClick={() => navigator.clipboard.writeText(household.invite_code)}
+                  className="rounded-lg bg-slate-100 px-3 py-1 text-sm hover:bg-slate-200"
+                >
+                  Kopiera
+                </button>
+              </div>
+
               <p className="mt-1 text-slate-500">
                 Inloggad som {profile?.full_name || session.user.email}
               </p>

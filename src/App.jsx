@@ -147,6 +147,19 @@ function LoginScreen({ onLogin }) {
   );
 }
 
+function priorityLabel(priority) {
+  if (priority === "high") return "🔴 Hög";
+  if (priority === "low") return "🟢 Låg";
+  return "🟡 Medel";
+}
+
+function repeatLabel(repeat) {
+  if (repeat === "daily") return "Dagligen";
+  if (repeat === "weekly") return "Varje vecka";
+  if (repeat === "monthly") return "Varje månad";
+  return "Ingen";
+}
+
 export default function App() {
   const [currentUserId, setCurrentUserId] = useState(null);
   const [folders, setFolders] = useState([]);
@@ -292,6 +305,9 @@ export default function App() {
         section_id: sectionId,
         text,
         done: false,
+        priority: draft.priority || "medium",
+        deadline: draft.deadline || null,
+        repeat: draft.repeat || "none",
         created_by: currentUser.id,
         assigned_to: draft.assignedTo || currentUser.id,
       },
@@ -304,7 +320,13 @@ export default function App() {
 
     setDrafts((prev) => ({
       ...prev,
-      [draftKey]: { text: "", assignedTo: currentUser.id },
+      [draftKey]: {
+        text: "",
+        assignedTo: currentUser.id,
+        priority: "medium",
+        deadline: "",
+        repeat: "none",
+      },
     }));
 
     loadData();
@@ -497,6 +519,9 @@ export default function App() {
                         const draft = drafts[draftKey] || {
                           text: "",
                           assignedTo: currentUser.id,
+                          priority: "medium",
+                          deadline: "",
+                          repeat: "none",
                         };
 
                         const visibleItems = section.items.filter((item) => {
@@ -531,7 +556,7 @@ export default function App() {
                               </button>
                             </div>
 
-                            <div className="mt-4 grid gap-3 md:grid-cols-[1fr_160px_auto]">
+                            <div className="mt-4 space-y-3">
                               <input
                                 value={draft.text}
                                 onChange={(e) =>
@@ -544,34 +569,81 @@ export default function App() {
                                   e.key === "Enter" && addItem(folder.id, section.id)
                                 }
                                 placeholder="Lägg till uppgift"
-                                className="rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-400"
+                                className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-400"
                               />
 
-                              <select
-                                value={draft.assignedTo || currentUser.id}
-                                onChange={(e) =>
-                                  setDrafts((prev) => ({
-                                    ...prev,
-                                    [draftKey]: { ...draft, assignedTo: e.target.value },
-                                  }))
-                                }
-                                className="rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-400"
-                              >
-                                {USERS.map((user) => (
-                                  <option key={user.id} value={user.id}>
-                                    Tilldela {user.name}
-                                  </option>
-                                ))}
-                              </select>
+                              <div className="grid gap-3 md:grid-cols-3">
+                                <select
+                                  value={draft.assignedTo || currentUser.id}
+                                  onChange={(e) =>
+                                    setDrafts((prev) => ({
+                                      ...prev,
+                                      [draftKey]: { ...draft, assignedTo: e.target.value },
+                                    }))
+                                  }
+                                  className="rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-400"
+                                >
+                                  {USERS.map((user) => (
+                                    <option key={user.id} value={user.id}>
+                                      Tilldela {user.name}
+                                    </option>
+                                  ))}
+                                </select>
 
-                              <button
-                                type="button"
-                                onClick={() => addItem(folder.id, section.id)}
-                                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 font-medium text-white"
-                              >
-                                <Plus className="h-4 w-4" />
-                                Lägg till
-                              </button>
+                                <select
+                                  value={draft.priority || "medium"}
+                                  onChange={(e) =>
+                                    setDrafts((prev) => ({
+                                      ...prev,
+                                      [draftKey]: { ...draft, priority: e.target.value },
+                                    }))
+                                  }
+                                  className="rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-400"
+                                >
+                                  <option value="high">🔴 Hög</option>
+                                  <option value="medium">🟡 Medel</option>
+                                  <option value="low">🟢 Låg</option>
+                                </select>
+
+                                <select
+                                  value={draft.repeat || "none"}
+                                  onChange={(e) =>
+                                    setDrafts((prev) => ({
+                                      ...prev,
+                                      [draftKey]: { ...draft, repeat: e.target.value },
+                                    }))
+                                  }
+                                  className="rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-400"
+                                >
+                                  <option value="none">Ingen repetition</option>
+                                  <option value="daily">Dagligen</option>
+                                  <option value="weekly">Varje vecka</option>
+                                  <option value="monthly">Varje månad</option>
+                                </select>
+                              </div>
+
+                              <div className="grid gap-3 md:grid-cols-[1fr_auto]">
+                                <input
+                                  type="date"
+                                  value={draft.deadline || ""}
+                                  onChange={(e) =>
+                                    setDrafts((prev) => ({
+                                      ...prev,
+                                      [draftKey]: { ...draft, deadline: e.target.value },
+                                    }))
+                                  }
+                                  className="rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-400"
+                                />
+
+                                <button
+                                  type="button"
+                                  onClick={() => addItem(folder.id, section.id)}
+                                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 font-medium text-white"
+                                >
+                                  <Plus className="h-4 w-4" />
+                                  Lägg till
+                                </button>
+                              </div>
                             </div>
 
                             <div className="mt-4 space-y-3">
@@ -620,9 +692,18 @@ export default function App() {
                                           {item.text}
                                         </div>
 
-                                        <div className="mt-1 text-xs text-slate-500">
-                                          Skapad av {createdUser?.name || "okänd"} • Tilldelad{" "}
-                                          {assignedUser?.name || "okänd"}
+                                        <div className="mt-1 flex flex-wrap gap-3 text-xs text-slate-500">
+                                          <span>
+                                            Skapad av {createdUser?.name || "okänd"}
+                                          </span>
+                                          <span>
+                                            Tilldelad {assignedUser?.name || "okänd"}
+                                          </span>
+                                          <span>{priorityLabel(item.priority)}</span>
+                                          {item.deadline ? <span>📅 {item.deadline}</span> : null}
+                                          {item.repeat && item.repeat !== "none" ? (
+                                            <span>🔁 {repeatLabel(item.repeat)}</span>
+                                          ) : null}
                                         </div>
                                       </div>
 

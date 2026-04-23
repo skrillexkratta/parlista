@@ -542,14 +542,23 @@ export default function App() {
   };
 
   const toggleItem = async (itemId, currentDone) => {
-    const { error } = await supabase
-      .from("items")
-      .update({ done: !currentDone })
-      .eq("id", itemId);
-
-    if (error) {
-      console.error(error);
-      return;
+    if (!currentDone) {
+      // Om uppgiften inte är gjord, markera som gjord och ta bort den
+      const { error } = await supabase.from("items").delete().eq("id", itemId);
+      if (error) {
+        console.error(error);
+        return;
+      }
+    } else {
+      // Om den är gjord, sätt tillbaka till inte gjord (omvänd funktion)
+      const { error } = await supabase
+        .from("items")
+        .update({ done: false })
+        .eq("id", itemId);
+      if (error) {
+        console.error(error);
+        return;
+      }
     }
 
     refreshApp();
